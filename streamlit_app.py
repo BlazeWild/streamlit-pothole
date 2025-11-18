@@ -1,8 +1,9 @@
 import streamlit as st
-import cv2
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration
 from ultralytics import YOLO
+import cv2
 import numpy as np
-import time
+import av
 
 # Page config
 st.set_page_config(
@@ -11,7 +12,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Title
 st.title("🎯 Real-Time Object Detection with YOLO")
 
 # Load YOLO model
@@ -37,34 +37,36 @@ confidence_threshold = st.sidebar.slider(
     step=0.05
 )
 
-# Main content
-if model:
-    run = st.checkbox('Start Camera')
-    FRAME_WINDOW = st.image([])
-    
-    if run:
-        cap = cv2.VideoCapture(0)
+# Video transformer class
+class YOLOTransformer(VideoTransformerBase):
+    def __init__(self):
+        self.model = model
         
-        while run:
-            ret, frame = cap.read()
-            
-            if not ret:
-                st.error("Failed to access camera")
-                break
-            
+    def transform(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+        
+        if self.model:
             # Run YOLO detection
-            results = model(frame, conf=confidence_threshold, verbose=False)
+            results = self.model(img, conf=confidence_threshold, verbose=False)
             
             # Draw detections
-            annotated_frame = results[0].plot()
-            
-            # Convert BGR to RGB
-            annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
-            
-            # Display frame
-            FRAME_WINDOW.image(annotated_frame)
+            img = results[0].plot()
         
-        cap.release()
+        return img
+
+# Main content
+if model:
+    st.info("👇 Click START to allow camera access")
+    
+    webrtc_streamer(
+        key="object-detection",
+        video_transformer_factory=YOLOTransformer,
+        rtc_configuration=RTCConfiguration(
+            {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+        ),
+        media_stream_constraints={"video": True, "audio": False},
+        async_processing=True,
+    )
 else:
     st.error("Model failed to load")
 
