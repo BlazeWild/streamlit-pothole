@@ -1,6 +1,8 @@
-# Object Detection
+# Object Detection with YOLO
 
-Streamlit app for object detection on images and videos using YOLO.
+Upload images or videos to detect objects using YOLO.
+
+**Live Demo:** https://yoloblaze.streamlit.app/
 
 ## Installation
 
@@ -13,5 +15,3 @@ pip install -r requirements.txt
 ```bash
 streamlit run streamlit_app.py
 ```
-
-Upload an image or video to detect objects.
