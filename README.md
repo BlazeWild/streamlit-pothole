@@ -1,6 +1,6 @@
-# Real-Time Object Detection
+# Object Detection
 
-Streamlit app for real-time object detection using webcam and YOLO.
+Streamlit app for object detection on images and videos using YOLO.
 
 ## Installation
 
@@ -14,4 +14,4 @@ pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
 
-Allow camera access when prompted.
+Upload an image or video to detect objects.
