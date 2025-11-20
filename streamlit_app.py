@@ -39,7 +39,7 @@ confidence_threshold = st.sidebar.slider(
 
 detection_type = st.sidebar.radio(
     "Upload Type",
-    ["Image", "Video"]
+    ["Video", "Image"]
 )
 
 # Main content
@@ -89,7 +89,7 @@ if model:
             
             with col1:
                 st.markdown("**Original Video**")
-                st.video(uploaded_file)
+                st.video(video_path)
             
             with col2:
                 st.markdown("**Detected Objects**")
@@ -98,55 +98,61 @@ if model:
                     # Create output path
                     output_path = tempfile.NamedTemporaryFile(delete=False, suffix='_detected.mp4').name
                     
-                    cap = cv2.VideoCapture(video_path)
-                    
-                    # Get video properties
-                    fps = int(cap.get(cv2.CAP_PROP_FPS))
-                    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                    
-                    # Define codec and create VideoWriter
-                    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-                    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-                    
-                    # Progress bar
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
-                    
-                    frame_count = 0
-                    
-                    while cap.isOpened():
-                        ret, frame = cap.read()
-                        if not ret:
-                            break
+                    with st.spinner("Processing video..."):
+                        cap = cv2.VideoCapture(video_path)
                         
-                        # Run YOLO detection
-                        results = model(frame, conf=confidence_threshold, verbose=False)
+                        # Get video properties
+                        fps = int(cap.get(cv2.CAP_PROP_FPS))
+                        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
                         
-                        # Draw bounding boxes on frame
-                        annotated_frame = results[0].plot()
+                        # Define codec and create VideoWriter
+                        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
                         
-                        # Write frame to output video
-                        out.write(annotated_frame)
+                        # Progress bar
+                        progress_bar = st.progress(0)
+                        status_text = st.empty()
                         
-                        frame_count += 1
-                        progress = frame_count / total_frames
-                        progress_bar.progress(progress)
-                        status_text.text(f"Processing: {frame_count}/{total_frames} frames")
-                    
-                    cap.release()
-                    out.release()
-                    progress_bar.empty()
-                    status_text.empty()
+                        frame_count = 0
+                        
+                        while cap.isOpened():
+                            ret, frame = cap.read()
+                            if not ret:
+                                break
+                            
+                            # Run YOLO detection
+                            results = model(frame, conf=confidence_threshold, verbose=False)
+                            
+                            # Draw bounding boxes on frame
+                            annotated_frame = results[0].plot()
+                            
+                            # Write frame to output video
+                            out.write(annotated_frame)
+                            
+                            frame_count += 1
+                            if total_frames > 0:
+                                progress = frame_count / total_frames
+                                progress_bar.progress(progress)
+                                status_text.text(f"Processing: {frame_count}/{total_frames} frames")
+                        
+                        cap.release()
+                        out.release()
+                        progress_bar.empty()
+                        status_text.empty()
                     
                     st.success(f"✅ Processed {frame_count} frames!")
                     
-                    # Display processed video
-                    st.video(output_path)
+                    # Store output path in session state
+                    st.session_state['output_path'] = output_path
+                
+                # Display processed video if it exists
+                if 'output_path' in st.session_state:
+                    st.video(st.session_state['output_path'])
                     
                     # Download button
-                    with open(output_path, 'rb') as f:
+                    with open(st.session_state['output_path'], 'rb') as f:
                         st.download_button(
                             label="⬇️ Download Processed Video",
                             data=f.read(),
